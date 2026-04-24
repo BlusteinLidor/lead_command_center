@@ -1,0 +1,7 @@
+.env
+.cursorrules
+__pycache__/
+.cursor/
+venv/
+.venv/
+leads.db
