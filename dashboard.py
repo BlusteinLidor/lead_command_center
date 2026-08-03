@@ -15,6 +15,36 @@ load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 EMBED_PORT = int(os.getenv("DEMO_API_PORT", "8000"))
 
+
+def _apply_streamlit_secrets() -> None:
+    """Copy Streamlit Cloud secrets into os.environ for FastAPI / OpenAI modules."""
+    try:
+        secrets = st.secrets
+    except Exception:
+        return
+    for key in (
+        "OPENAI_API_KEY",
+        "DATABASE_URL",
+        "API_BASE_URL",
+        "DEMO_EMBED_API",
+        "DEMO_API_PORT",
+        "CORS_ORIGINS",
+    ):
+        try:
+            val = secrets[key]
+        except Exception:
+            continue
+        if val is None or str(val).strip() == "":
+            continue
+        if not os.getenv(key):
+            os.environ[key] = str(val)
+
+
+def _refresh_runtime_config() -> None:
+    global API_BASE_URL, EMBED_PORT
+    API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+    EMBED_PORT = int(os.getenv("DEMO_API_PORT", "8000"))
+
 # Streamlit 1.40 (last release for Python 3.8) does not support row_height / in-cell wrap;
 # insert soft newlines so long values render on multiple lines instead of bleeding into neighbors.
 _LEAD_TEXT_WRAP_COLS = ("message_body", "summary", "detected_intent")
@@ -387,6 +417,8 @@ def reset_demo_data() -> Tuple[bool, str]:
 
 def main() -> None:
     st.set_page_config(page_title="Lead Command Center", layout="wide")
+    _apply_streamlit_secrets()
+    _refresh_runtime_config()
 
     boot = bootstrap_backend()
 
