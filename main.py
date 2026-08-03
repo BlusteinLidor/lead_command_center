@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List
 
@@ -10,8 +11,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_processor import analyze_lead
-from database import get_db, init_db
-from models import Lead, LeadAnalysis, LeadOut, LeadWebhookPayload
+from database import AsyncSessionLocal, get_db, init_db
+from models import Lead, LeadAnalysis, LeadOut, LeadStageUpdate, LeadWebhookPayload
+from seed_data import ensure_seeded, reset_and_seed
 
 load_dotenv()
 
@@ -19,17 +21,26 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
+    async with AsyncSessionLocal() as session:
+        await ensure_seeded(session)
     yield
 
 
 app = FastAPI(title="Lead Command Center API", lifespan=lifespan)
 
+_cors_extra = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8501",
         "http://127.0.0.1:8501",
+        *_cors_extra,
     ],
+    allow_origin_regex=r"https://.*\.streamlit\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,6 +48,11 @@ app.add_middleware(
 
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+
+
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
 
 
 @app.post("/webhook/lead", response_model=LeadOut, status_code=status.HTTP_201_CREATED)
@@ -80,6 +96,7 @@ async def webhook_lead(payload: LeadWebhookPayload, db: DbSession) -> Lead:
         summary=analysis.summary,
         urgency=analysis.urgency,
         detected_intent=analysis.detected_intent,
+        stage="New",
     )
     db.add(row)
     await db.commit()
@@ -93,3 +110,25 @@ async def list_leads(db: DbSession, limit: int = 500) -> List[Lead]:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 2000")
     result = await db.execute(select(Lead).order_by(Lead.created_at.desc()).limit(limit))
     return list(result.scalars().all())
+
+
+@app.patch("/leads/{lead_id}/stage", response_model=LeadOut)
+async def update_lead_stage(
+    lead_id: int,
+    body: LeadStageUpdate,
+    db: DbSession,
+) -> Lead:
+    row = await db.get(Lead, lead_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    row.stage = body.stage
+    await db.commit()
+    await db.refresh(row)
+    return row
+
+
+@app.post("/demo/reset", response_model=dict)
+async def demo_reset(db: DbSession) -> dict:
+    """Wipe leads and restore fictional portfolio seed data."""
+    count = await reset_and_seed(db)
+    return {"ok": True, "seeded": count}

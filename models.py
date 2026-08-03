@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+LeadStage = Literal["New", "Contacted", "Qualified", "Closed"]
+LEAD_STAGES: Tuple[str, ...] = ("New", "Contacted", "Qualified", "Closed")
 
 
 class Base(DeclarativeBase):
@@ -30,6 +33,7 @@ class Lead(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     urgency: Mapped[str] = mapped_column(String(16), nullable=False)
     detected_intent: Mapped[str] = mapped_column(String(512), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False, default="New")
 
 
 class LeadWebhookPayload(BaseModel):
@@ -67,6 +71,10 @@ class LeadAnalysis(BaseModel):
     detected_intent: str = Field(max_length=256)
 
 
+class LeadStageUpdate(BaseModel):
+    stage: LeadStage
+
+
 class LeadOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -82,3 +90,4 @@ class LeadOut(BaseModel):
     summary: str
     urgency: str
     detected_intent: str
+    stage: str

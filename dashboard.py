@@ -1,7 +1,9 @@
 import html
 import os
 import textwrap
-from typing import Dict, List, Tuple
+import threading
+import time
+from typing import Dict, List, Optional, Tuple
 
 import httpx
 import pandas as pd
@@ -11,11 +13,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+EMBED_PORT = int(os.getenv("DEMO_API_PORT", "8000"))
 
 # Streamlit 1.40 (last release for Python 3.8) does not support row_height / in-cell wrap;
 # insert soft newlines so long values render on multiple lines instead of bleeding into neighbors.
 _LEAD_TEXT_WRAP_COLS = ("message_body", "summary", "detected_intent")
 _LEAD_TEXT_WRAP_WIDTH = 56
+
+LEAD_STAGES = ("New", "Contacted", "Qualified", "Closed")
 
 
 def _soft_wrap_cell(value: object, width: int = _LEAD_TEXT_WRAP_WIDTH) -> object:
@@ -33,6 +38,70 @@ def _leads_display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if col in out.columns:
             out[col] = out[col].map(_soft_wrap_cell)
     return out
+
+
+def _should_embed_api() -> bool:
+    flag = os.getenv("DEMO_EMBED_API", "").strip().lower()
+    if flag in ("1", "true", "yes"):
+        return True
+    if flag in ("0", "false", "no"):
+        return False
+    # Default: embed on Streamlit Cloud, or when pointing at local API.
+    if os.path.exists("/mount/src"):
+        return True
+    return "127.0.0.1" in API_BASE_URL or "localhost" in API_BASE_URL
+
+
+def _api_healthy(base: Optional[str] = None) -> bool:
+    url = (base or API_BASE_URL).rstrip("/") + "/health"
+    try:
+        with httpx.Client(timeout=1.5) as client:
+            r = client.get(url)
+            return r.status_code == 200
+    except Exception:
+        return False
+
+
+def _run_embedded_api(host: str, port: int) -> None:
+    import uvicorn
+
+    try:
+        uvicorn.run(
+            "main:app",
+            host=host,
+            port=port,
+            log_level="warning",
+            access_log=False,
+        )
+    except OSError:
+        # Port already in use — assume an API is already running.
+        pass
+
+
+@st.cache_resource
+def bootstrap_backend() -> str:
+    """Optionally start FastAPI in-process (Streamlit Cloud / single-process demo)."""
+    if not _should_embed_api():
+        return "external"
+
+    if _api_healthy():
+        return "already-running"
+
+    host = "127.0.0.1"
+    thread = threading.Thread(
+        target=_run_embedded_api,
+        args=(host, EMBED_PORT),
+        daemon=True,
+        name="lead-command-api",
+    )
+    thread.start()
+
+    deadline = time.time() + 15.0
+    while time.time() < deadline:
+        if _api_healthy():
+            return "embedded"
+        time.sleep(0.15)
+    return "embed-timeout"
 
 
 # Sidebar test payloads: each tuple is (short label, JSON body). All contacts and copy are unique.
@@ -151,94 +220,85 @@ HEBREW_SAMPLE_LEADS: List[Tuple[str, Dict]] = [
             ),
         },
     ),
-    (
-        "נמוך — סקרנות כללית בלי צורך עסקי",
-        {
-            "source": "webform",
-            "channel": "generic",
-            "name": "יובל סתיו",
-            "phone": "+972-52-6677889",
-            "message": "שמעתי את השם שלכם בפודקאסט. מה בדיוק המוצר עושה? סתם סקרן.",
-        },
-    ),
 ]
 
 ENGLISH_SAMPLE_LEADS: List[Tuple[str, Dict]] = [
     (
-        "Enterprise — demo this week",
+        "Urgent — enterprise quote today",
+        {
+            "source": "whatsapp",
+            "channel": "chat",
+            "name": "Dana Cole",
+            "phone": "+1-415-555-0101",
+            "body": (
+                "Hi, I need an urgent quote for a 200-user rollout. "
+                "Can we talk today?"
+            ),
+        },
+    ),
+    (
+        "Healthcare — clinic CRM demo",
         {
             "source": "webform",
-            "channel": "landing",
-            "name": "Alex Rivera",
-            "email": "alex.rivera.procurement@example.com",
+            "channel": "contact",
+            "name": "Maya Stern",
+            "phone": "+1-628-555-0144",
+            "email": "maya.stern.clinic@example.com",
             "body": (
-                "We are evaluating your enterprise plan for 50 seats and need "
-                "a demo this week."
+                "We run a small clinic network and need CRM with appointment "
+                "scheduling and chart notes. Interested in a demo next week."
             ),
         },
     ),
     (
-        "Startup — 90-day pilot",
+        "SMB — new marketing site",
         {
-            "source": "producthunt",
-            "channel": "referral",
-            "name": "Jordan Kim",
-            "email": "jordan.kim.founder@example.io",
+            "source": "facebook",
+            "channel": "lead_ad",
+            "name": "Joe Abrams",
+            "phone": "+1-347-555-0199",
             "body": (
-                "Early-stage SaaS (12 people). Interested in a 90-day pilot with "
-                "usage-based pricing and a solution engineer for onboarding."
+                "I have a remodeling business and need a simple site with a gallery "
+                "and contact form. What's the price and timeline?"
             ),
         },
     ),
     (
-        "Finance — audit & data residency",
+        "Nonprofit — discount / grant",
         {
-            "source": "webform",
-            "channel": "security",
-            "name": "Priya Sharma",
-            "email": "priya.sharma.risk@example.bank",
+            "source": "email",
+            "channel": "inbound",
+            "name": "Nina Gale",
+            "email": "nina.gale.nonprofit@example.org",
             "body": (
-                "Before procurement sign-off we need SOC2 report, data residency "
-                "options in the EU, and answers on encryption at rest for attachments."
+                "We're an education nonprofit. Is there a discounted plan or grant "
+                "for NGOs? We need to launch before the school year."
             ),
         },
     ),
     (
-        "Retail — POS integration",
+        "Tech — webhook / API sandbox",
         {
-            "source": "partner",
-            "channel": "co_marketing",
-            "name": "Marcus Webb",
-            "phone": "+1-415-555-0192",
+            "source": "linkedin",
+            "channel": "message",
+            "name": "Omar Haddad",
+            "phone": "+1-646-555-0177",
             "body": (
-                "We run 40 stores and use Square. Do you offer a native connector or "
-                "only Zapier? Need near-real-time inventory sync."
+                "We're building an internal system and want to connect a lead "
+                "webhook. Do you have API docs and a sandbox?"
             ),
         },
     ),
     (
-        "Renewal at risk — executive sponsor",
-        {
-            "source": "crm",
-            "channel": "customer_success",
-            "name": "Elena Petrov",
-            "email": "elena.petrov.ops@example.corp",
-            "body": (
-                "Our renewal is in 30 days. Adoption in two regions is low; we need "
-                "an executive business review and a concrete success plan or we churn."
-            ),
-        },
-    ),
-    (
-        "Nonprofit — grant-funded rollout",
+        "Education — school LMS",
         {
             "source": "webform",
-            "channel": "ngo",
-            "name": "Sam Okonkwo",
-            "email": "sam.okonkwo.programs@example-ngo.org",
+            "channel": "demo_request",
+            "name": "Sara Benami",
+            "email": "sara.benami.school@example.edu",
             "body": (
-                "Grant covers tooling for three years for 200 volunteers. "
-                "Need invoicing that matches donor reporting and training in French."
+                "Digital coordinator at a high school. Looking for an LMS with "
+                "class cohorts and teacher permissions. Can we meet our IT team?"
             ),
         },
     ),
@@ -247,37 +307,9 @@ ENGLISH_SAMPLE_LEADS: List[Tuple[str, Dict]] = [
         {
             "source": "email",
             "channel": "reply",
-            "name": "Taylor Quinn",
-            "email": "taylor.quinn.notes@example.com",
-            "body": (
-                "Thanks for the PDF, I skimmed it. No next steps from my side right now."
-            ),
-        },
-    ),
-    (
-        "Low score — vendor pitching you",
-        {
-            "source": "cold_email",
-            "channel": "outbound_mistake",
-            "name": "Blake Foster",
-            "email": "blake.foster.leadgen@example.agency",
-            "body": (
-                "We sell outsourced SDR services. Want 20 qualified meetings/month? "
-                "Reply YES for pricing."
-            ),
-        },
-    ),
-    (
-        "Low score — student paper",
-        {
-            "source": "webform",
-            "channel": "contact",
-            "name": "Nora Díaz",
-            "email": "nora.diaz.mba@example.edu",
-            "body": (
-                "I'm writing a case study for class. Could someone answer three "
-                "anonymous survey questions? No budget and not evaluating vendors."
-            ),
+            "name": "Alex Oran",
+            "email": "alex.oran.thanks@example.com",
+            "body": "Thanks for yesterday's webinar — interesting, but nothing needed now.",
         },
     ),
     (
@@ -327,8 +359,36 @@ def post_simulated_lead(payload: Dict) -> Tuple[bool, str]:
         return False, "Request failed: {0!s}".format(e)
 
 
+def patch_lead_stage(lead_id: int, stage: str) -> Tuple[bool, str]:
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            r = client.patch(
+                f"{API_BASE_URL}/leads/{lead_id}/stage",
+                json={"stage": stage},
+            )
+            if r.status_code == 200:
+                return True, "Stage updated."
+            return False, "{0}: {1}".format(r.status_code, r.text)
+    except httpx.RequestError as e:
+        return False, "Request failed: {0!s}".format(e)
+
+
+def reset_demo_data() -> Tuple[bool, str]:
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            r = client.post(f"{API_BASE_URL}/demo/reset")
+            if r.status_code == 200:
+                data = r.json()
+                return True, "Demo reset — {0} seeded leads.".format(data.get("seeded", "?"))
+            return False, "{0}: {1}".format(r.status_code, r.text)
+    except httpx.RequestError as e:
+        return False, "Request failed: {0!s}".format(e)
+
+
 def main() -> None:
     st.set_page_config(page_title="Lead Command Center", layout="wide")
+
+    boot = bootstrap_backend()
 
     st.markdown(
         """
@@ -338,22 +398,61 @@ def main() -> None:
   text-align: right;
   unicode-bidi: plaintext;
 }
+.demo-banner {
+  background: #eef3f8;
+  border: 1px solid #c5d4e4;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.demo-banner strong { font-size: 1.05rem; }
+.demo-banner .he {
+  direction: rtl;
+  text-align: right;
+  margin-top: 0.25rem;
+  color: #334;
+  font-size: 0.95rem;
+}
 </style>
 """,
         unsafe_allow_html=True,
     )
 
+    st.markdown(
+        """
+<div class="demo-banner">
+  <strong>Portfolio demo — sample data only.</strong>
+  <div class="he">הדגמת תיק עבודות — נתוני דמה בלבד.</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
     st.title("Lead Command Center")
-    st.caption("Ingestion via FastAPI · AI scoring · SQLite persistence")
+    st.caption(
+        "Ops board for inbound leads · AI score & summary · triage by stage "
+        "(Almond Family Clinic sample)"
+    )
 
     with st.sidebar:
+        st.header("Demo controls")
+        if st.button("Reset demo data", help="Restore the fictional seed leads"):
+            ok, msg = reset_demo_data()
+            if ok:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+
+        st.divider()
         st.header("Simulate lead")
+        st.caption("Optional — needs OPENAI_API_KEY for live AI scoring.")
         lang = st.radio("Sample language", ("Hebrew", "English"), horizontal=True)
         scenarios = HEBREW_SAMPLE_LEADS if lang == "Hebrew" else ENGLISH_SAMPLE_LEADS
         labels = [label for label, _ in scenarios]
         choice = st.selectbox("Scenario", labels, index=0)
         sample = dict(next(payload for lab, payload in scenarios if lab == choice))
-        if st.button("Send test JSON to webhook", type="primary"):
+        if st.button("Send test JSON to webhook", type="secondary"):
             ok, msg = post_simulated_lead(sample)
             if ok:
                 st.success(msg)
@@ -366,8 +465,9 @@ def main() -> None:
             "API base URL",
             value=API_BASE_URL,
             disabled=True,
-            help="Set API_BASE_URL in .env",
+            help="Set API_BASE_URL in .env or Streamlit secrets",
         )
+        st.caption("Backend: {0}".format(boot))
 
     try:
         leads = fetch_leads()
@@ -377,7 +477,8 @@ def main() -> None:
     except httpx.RequestError as e:
         st.error(
             "Could not reach API at {0}. Start the server with: "
-            "`uvicorn main:app --reload --host 127.0.0.1 --port 8000` — {1!s}".format(
+            "`uvicorn main:app --reload --host 127.0.0.1 --port 8000` "
+            "or set DEMO_EMBED_API=1 — {1!s}".format(
                 API_BASE_URL,
                 e,
             )
@@ -389,22 +490,62 @@ def main() -> None:
     avg_score = (
         round(sum(x.get("score", 0) for x in leads) / total, 1) if total else 0.0
     )
+    by_stage = {s: sum(1 for x in leads if x.get("stage") == s) for s in LEAD_STAGES}
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total leads", total)
-    c2.metric("High urgency leads", high_urgency)
-    c3.metric("Average lead score", "{0:.1f}".format(avg_score))
+    c2.metric("High urgency", high_urgency)
+    c3.metric("Average score", "{0:.1f}".format(avg_score))
+    c4.metric("New / open", by_stage.get("New", 0))
 
-    st.subheader("All leads")
+    st.subheader("Triage a lead")
+    st.caption("Pick a lead, change its stage, and watch the board update — the ops moment.")
 
     if not leads:
-        st.info("No leads yet. Use **Simulate lead** in the sidebar.")
+        st.info("No leads yet. Use **Reset demo data** in the sidebar.")
         return
+
+    lead_options = {
+        "#{0} — {1} [{2}]".format(
+            row.get("id"),
+            row.get("contact_name") or "Unknown",
+            row.get("stage") or "New",
+        ): row
+        for row in leads
+    }
+    selected_label = st.selectbox("Lead", list(lead_options.keys()), index=0)
+    selected = lead_options[selected_label]
+    current_stage = selected.get("stage") or "New"
+    try:
+        stage_index = LEAD_STAGES.index(current_stage)
+    except ValueError:
+        stage_index = 0
+
+    col_a, col_b = st.columns([2, 1])
+    with col_a:
+        new_stage = st.selectbox("New stage", LEAD_STAGES, index=stage_index)
+    with col_b:
+        st.write("")
+        st.write("")
+        if st.button("Update stage", type="primary", use_container_width=True):
+            ok, msg = patch_lead_stage(int(selected["id"]), new_stage)
+            if ok:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+
+    stage_cols = st.columns(len(LEAD_STAGES))
+    for col, stage in zip(stage_cols, LEAD_STAGES):
+        col.metric(stage, by_stage.get(stage, 0))
+
+    st.subheader("All leads")
 
     df = pd.DataFrame(leads)
     display_cols = [
         "id",
         "created_at",
+        "stage",
         "source",
         "channel",
         "contact_name",
@@ -423,11 +564,12 @@ def main() -> None:
     lead_column_config = {
         "id": st.column_config.NumberColumn("ID", format="%d", width="small"),
         "created_at": st.column_config.TextColumn("Created", width="medium"),
+        "stage": st.column_config.TextColumn("Stage", width="small"),
         "source": st.column_config.TextColumn("Source", width="small"),
         "channel": st.column_config.TextColumn("Channel", width="small"),
         "contact_name": st.column_config.TextColumn("Contact", width="medium"),
         "message_body": st.column_config.TextColumn("Message", width="large"),
-        "score": st.column_config.NumberColumn("Score", format="%.1f", width="small"),
+        "score": st.column_config.NumberColumn("Score", format="%d", width="small"),
         "urgency": st.column_config.TextColumn("Urgency", width="small"),
         "detected_intent": st.column_config.TextColumn("Intent", width="medium"),
         "summary": st.column_config.TextColumn("Summary", width="large"),
@@ -457,12 +599,12 @@ def main() -> None:
     with st.expander("Summaries (RTL-safe view)"):
         for row in leads:
             sid = html.escape(str(row.get("id", "")))
+            stage = html.escape(str(row.get("stage") or ""))
             s = row.get("summary") or ""
             safe = html.escape(s)
             st.markdown(
-                '<p><strong>#{0}</strong></p><div class="hebrew-cell">{1}</div>'.format(
-                    sid, safe
-                ),
+                '<p><strong>#{0}</strong> · {1}</p>'
+                '<div class="hebrew-cell">{2}</div>'.format(sid, stage, safe),
                 unsafe_allow_html=True,
             )
 
