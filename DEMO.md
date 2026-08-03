@@ -87,7 +87,7 @@ DEMO_EMBED_API = "1"
 
 ```text
 id: lead-command-center
-demoUrl: (fill after deploy)
+demoUrl: PENDING — deploy at https://share.streamlit.io (repo BlusteinLidor/lead_command_center, branch master, main file dashboard.py). Suggested subdomain: lead-command-center
 title_en: Lead Command Center
 title_he: מרכז פיקוד לידים
 problem_en: Leads arrive scattered across WhatsApp, forms, and email — follow-ups get missed in spreadsheets.
@@ -100,3 +100,19 @@ tech: FastAPI, Streamlit, SQLite, OpenAI
 videoUrl:
 poster:
 ```
+
+### Deploy checklist (one-time)
+
+1. Open [Streamlit Community Cloud](https://share.streamlit.io) and sign in with GitHub (`BlusteinLidor`).
+2. Create app → repository `BlusteinLidor/lead_command_center`, branch `master`, file `dashboard.py`.
+3. Optional custom subdomain: `lead-command-center`.
+4. Advanced secrets (optional OpenAI for simulator):
+
+```toml
+DEMO_EMBED_API = "1"
+API_BASE_URL = "http://127.0.0.1:8000"
+DATABASE_URL = "sqlite+aiosqlite:///./leads.db"
+# OPENAI_API_KEY = "sk-..."
+```
+
+5. Deploy → copy the `https://….streamlit.app` URL into `demoUrl` above.
