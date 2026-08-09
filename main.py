@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator, List
 
 from typing_extensions import Annotated
@@ -7,6 +8,8 @@ from typing_extensions import Annotated
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +19,8 @@ from models import Lead, LeadAnalysis, LeadOut, LeadStageUpdate, LeadWebhookPayl
 from seed_data import ensure_seeded, reset_and_seed
 
 load_dotenv()
+
+_FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
 
 
 @asynccontextmanager
@@ -38,6 +43,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8501",
         "http://127.0.0.1:8501",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         *_cors_extra,
     ],
     allow_origin_regex=r"https://.*\.streamlit\.app",
@@ -132,3 +139,37 @@ async def demo_reset(db: DbSession) -> dict:
     """Wipe leads and restore fictional portfolio seed data."""
     count = await reset_and_seed(db)
     return {"ok": True, "seeded": count}
+
+
+def _mount_spa() -> None:
+    """Serve the Vite production build when frontend/dist exists."""
+    if not _FRONTEND_DIST.is_dir():
+        return
+    assets = _FRONTEND_DIST / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
+
+    @app.get("/")
+    async def spa_index() -> FileResponse:
+        return FileResponse(_FRONTEND_DIST / "index.html")
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str) -> FileResponse:
+        # API routes are registered first; unmatched GETs fall through to the SPA.
+        index = _FRONTEND_DIST / "index.html"
+        candidate = (_FRONTEND_DIST / full_path).resolve()
+        dist_root = _FRONTEND_DIST.resolve()
+        try:
+            candidate.relative_to(dist_root)
+        except ValueError:
+            if index.is_file():
+                return FileResponse(index)
+            raise HTTPException(status_code=404, detail="Frontend not built") from None
+        if candidate.is_file():
+            return FileResponse(candidate)
+        if index.is_file():
+            return FileResponse(index)
+        raise HTTPException(status_code=404, detail="Frontend not built")
+
+
+_mount_spa()

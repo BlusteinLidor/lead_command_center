@@ -1,0 +1,14 @@
+# Public demo hosting — free tier Web Service (Docker)
+# https://dashboard.render.com → New → Blueprint → connect this repo
+services:
+  - type: web
+    name: lead-command-center
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./leads.db
+      - key: OPENAI_API_KEY
+        sync: false

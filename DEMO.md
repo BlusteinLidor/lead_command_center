@@ -1,6 +1,7 @@
 # Lead Command Center — portfolio demo
 
-Public Streamlit demo of an internal ops board: inbound leads, AI score/summary, triage by stage.
+Public ops board demo: inbound clinic leads, AI score/summary, triage by stage.
+**Primary UI:** React SPA. **API:** FastAPI + SQLite (+ optional OpenAI).
 
 ## Local run
 
@@ -11,71 +12,89 @@ pip install -r requirements.txt
 cp .env.example .env   # then edit secrets
 ```
 
-**Option A — single process (matches Streamlit Cloud):**
+### Option A — one process (API + production UI)
 
 ```bash
-# DEMO_EMBED_API defaults on for localhost API_BASE_URL
-streamlit run dashboard.py
+cd frontend
+npm install
+npm run build
+cd ..
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Option B — two processes:**
+Open http://127.0.0.1:8000 — seeded clinic leads appear immediately.
+
+### Option B — frontend dev server (hot reload)
 
 ```bash
 # terminal 1
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 # terminal 2
-set DEMO_EMBED_API=0
-streamlit run dashboard.py
+cd frontend
+npm install
+npm run dev
 ```
 
-Open http://localhost:8501 — seeded clinic leads should appear immediately.
+Open http://localhost:5173 — Vite proxies `/api/*` to the API.
 
 ### Demo happy path (&lt;60s)
 
-1. Read the portfolio banner (sample data only).
-2. Under **Triage a lead**, pick a lead and change **stage** → **Update stage**.
-3. Confirm the board and stage metrics update.
-4. Optional: **Reset demo data** in the sidebar to restore the seed set.
-
-### Simulate lead (optional)
-
-Sidebar **Send test JSON to webhook** calls OpenAI. Requires `OPENAI_API_KEY`. The main board does **not** need OpenAI.
+1. Read brand + “Demo · sample data” chip.
+2. Spot **High urgency** KPI and open a hot lead card.
+3. In the drawer, change **stage** (e.g. New → Contacted / Qualified).
+4. Confirm the Kanban column and KPIs update.
+5. Optional: **Demo tools** → Reset demo data.
+6. Optional: EN/HE language toggle (full RTL in Hebrew).
+7. Optional: Demo tools → Simulate inbound lead (needs `OPENAI_API_KEY`).
 
 ## Environment / secrets
 
 | Variable | Required | Notes |
 |----------|----------|--------|
 | `DATABASE_URL` | No | Default `sqlite+aiosqlite:///./leads.db` |
-| `API_BASE_URL` | No | Default `http://127.0.0.1:8000` |
-| `DEMO_EMBED_API` | No | `1`/`0` — embed FastAPI inside Streamlit. Auto on Streamlit Cloud / localhost |
-| `DEMO_API_PORT` | No | Default `8000` |
-| `OPENAI_API_KEY` | Only for webhook simulator | Not needed to view/triage seed leads |
-| `CORS_ORIGINS` | No | Extra comma-separated origins for the API |
-
-Streamlit Community Cloud: set the same keys under **App settings → Secrets** (TOML), e.g.:
-
-```toml
-OPENAI_API_KEY = "sk-..."
-DATABASE_URL = "sqlite+aiosqlite:///./leads.db"
-API_BASE_URL = "http://127.0.0.1:8000"
-DEMO_EMBED_API = "1"
-```
+| `OPENAI_API_KEY` | Only for webhook simulator | Board + triage work without it |
+| `CORS_ORIGINS` | No | Extra comma-separated origins (Vite `5173` is allowed by default) |
+| `VITE_API_BASE` | No | Frontend only; default `/api` in dev, empty in production build |
 
 ## Reset data
 
-- **UI:** sidebar → **Reset demo data** (`POST /demo/reset`).
-- **Cloud reboot:** ephemeral disk clears; next start re-seeds if the DB is empty.
+- **UI:** Demo tools → Reset demo data (`POST /demo/reset`).
 - Seed theme: fictional **Almond Family Clinic** / מרפאת שקד — no real PII.
 
-## Deploy (Streamlit Community Cloud)
+## Deploy (public URL)
 
-1. Push this repo to GitHub.
-2. https://share.streamlit.io → **New app** → select repo, branch, main file `dashboard.py`.
-3. Add secrets (above). `OPENAI_API_KEY` optional.
-4. Deploy and copy the `https://….streamlit.app` URL into the handoff block below.
+Streamlit Cloud cannot host this React UI. Use a single Docker service that serves FastAPI + the built SPA.
 
-## API (embedded or standalone)
+### Render (free tier, recommended)
+
+1. **Commit and push** this repo to GitHub (`BlusteinLidor/lead_command_center`).
+2. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
+3. Connect the GitHub repo. Render reads [`render.yaml`](render.yaml) and creates `lead-command-center`.
+4. Optional: set secret **`OPENAI_API_KEY`** for the lead simulator (board works without it).
+5. Deploy → open `https://lead-command-center.onrender.com` (or your service URL).
+
+**Manual alternative:** New → Web Service → Docker, root directory `.`, health check `/health`. Free instances sleep after idle; first load can take ~30–60s.
+
+### Railway / Fly / any Docker host
+
+```bash
+docker build -t lead-command-center .
+docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... lead-command-center
+```
+
+Or build without Docker:
+
+```bash
+cd frontend && npm ci && npm run build && cd ..
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+SQLite on free hosts is ephemeral (re-seeds on cold start). That is fine for a portfolio demo.
+
+Legacy Streamlit UI still exists as `dashboard.py` for reference; the product surface is the React app.
+
+## API
 
 - `GET /health`
 - `GET /leads`
@@ -87,7 +106,7 @@ DEMO_EMBED_API = "1"
 
 ```text
 id: lead-command-center
-demoUrl: PENDING — deploy at https://share.streamlit.io (repo BlusteinLidor/lead_command_center, branch master, main file dashboard.py). Suggested subdomain: lead-command-center
+demoUrl: PENDING — deploy on Render via render.yaml (see Deploy above). Service name: lead-command-center
 title_en: Lead Command Center
 title_he: מרכז פיקוד לידים
 problem_en: Leads arrive scattered across WhatsApp, forms, and email — follow-ups get missed in spreadsheets.
@@ -96,23 +115,7 @@ solution_en: One ops board that ingests leads, scores and summarizes with AI, an
 solution_he: לוח תפעול אחד שקולט לידים, מדרג ומסכם עם AI, ומאפשר לנהל שלב בצינור המכירות.
 result_en: Single source of truth — hot leads are visible immediately and staged in under a minute.
 result_he: מקור אמת אחד — לידים חמים נראים מיד ועוברים שלב בפחות מדקה.
-tech: FastAPI, Streamlit, SQLite, OpenAI
+tech: FastAPI, React, TypeScript, Vite, Tailwind CSS, SQLite, OpenAI
 videoUrl:
 poster:
 ```
-
-### Deploy checklist (one-time)
-
-1. Open [Streamlit Community Cloud](https://share.streamlit.io) and sign in with GitHub (`BlusteinLidor`).
-2. Create app → repository `BlusteinLidor/lead_command_center`, branch `master`, file `dashboard.py`.
-3. Optional custom subdomain: `lead-command-center`.
-4. Advanced secrets (optional OpenAI for simulator):
-
-```toml
-DEMO_EMBED_API = "1"
-API_BASE_URL = "http://127.0.0.1:8000"
-DATABASE_URL = "sqlite+aiosqlite:///./leads.db"
-# OPENAI_API_KEY = "sk-..."
-```
-
-5. Deploy → copy the `https://….streamlit.app` URL into `demoUrl` above.
