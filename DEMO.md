@@ -44,9 +44,10 @@ Open http://localhost:5173 — Vite proxies `/api/*` to the API.
 2. Spot **High urgency** KPI and open a hot lead card.
 3. In the drawer, change **stage** (e.g. New → Contacted / Qualified).
 4. Confirm the Kanban column and KPIs update.
-5. Optional: **Demo tools** → Reset demo data.
-6. Optional: EN/HE language toggle (full RTL in Hebrew).
-7. Optional: Demo tools → Simulate inbound lead (needs `OPENAI_API_KEY`).
+5. Optional: **Settings** (gear) → choose inbound frequency (default **Never**); new cards appear live in **New**.
+6. Optional: **Demo tools** → Reset demo data.
+7. Optional: EN/HE language toggle (full RTL in Hebrew).
+8. Optional: Demo tools → Simulate inbound lead with AI (needs `OPENAI_API_KEY`).
 
 ## Environment / secrets
 
@@ -101,6 +102,7 @@ Legacy Streamlit UI still exists as `dashboard.py` for reference; the product su
 - `PATCH /leads/{id}/stage` — body `{"stage":"New"|"Contacted"|"Qualified"|"Closed"}`
 - `POST /webhook/lead` — AI ingest (needs OpenAI)
 - `POST /demo/reset` — wipe + re-seed
+- `POST /demo/incoming` — one randomized fictitious inbound lead (no OpenAI; for live recording)
 
 ## Portfolio handoff
 

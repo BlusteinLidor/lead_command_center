@@ -1,5 +1,6 @@
 """Fictional clinic lead seed for the portfolio demo — no real PII."""
 
+import random
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
@@ -180,7 +181,130 @@ SEED_LEADS: List[Dict[str, Any]] = [
 ]
 
 
-def _lead_from_seed(item: Dict[str, Any]) -> Lead:
+# Rotating pool for live “incoming lead” demo (no OpenAI; portfolio recording).
+INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
+    {
+        "source": "whatsapp",
+        "channel": "chat",
+        "contact_name": "עדי מזרחי",
+        "contact_email": None,
+        "contact_phone": "+972-50-7002001",
+        "message_body": (
+            "שלום, יש לי חום גבוה ושיעול כבר יומיים. "
+            "אפשר תור לרופא משפחה היום במרפאת שקד?"
+        ),
+        "score": 94,
+        "summary": "פנייה דחופה לתור רופא משפחה באותו יום בשל חום ושיעול.",
+        "urgency": "High",
+        "detected_intent": "תור דחוף",
+    },
+    {
+        "source": "webform",
+        "channel": "contact",
+        "contact_name": "Emma Lang",
+        "contact_email": "emma.lang.demo@example.com",
+        "contact_phone": "+972-50-7003001",
+        "message_body": (
+            "Looking for a pediatric checkup for my 3-year-old at Almond Family Clinic. "
+            "Do you accept new patients next week?"
+        ),
+        "score": 76,
+        "summary": "New-patient pediatric checkup request for next week.",
+        "urgency": "Med",
+        "detected_intent": "New patient booking",
+    },
+    {
+        "source": "facebook",
+        "channel": "lead_ad",
+        "contact_name": "אורי ונועה",
+        "contact_email": None,
+        "contact_phone": "+972-52-7002003",
+        "message_body": (
+            "עברנו לשכונה ומחפשים רופא ילדים קבוע במרפאה. "
+            "יש מקום למשפחה עם שני ילדים?"
+        ),
+        "score": 81,
+        "summary": "משפחה חדשה מחפשת רופא ילדים קבוע לשני ילדים.",
+        "urgency": "Med",
+        "detected_intent": "רישום משפחה",
+    },
+    {
+        "source": "phone",
+        "channel": "callback_request",
+        "contact_name": "Mark Ezra",
+        "contact_email": None,
+        "contact_phone": "+972-52-7003002",
+        "message_body": (
+            "Please call me back about physiotherapy after knee surgery. "
+            "My insurance covers part of the sessions."
+        ),
+        "score": 88,
+        "summary": "Callback for post-surgery physio; insurance partially covers.",
+        "urgency": "High",
+        "detected_intent": "Physio callback",
+    },
+    {
+        "source": "instagram",
+        "channel": "dm",
+        "contact_name": "נועה אלון",
+        "contact_email": None,
+        "contact_phone": "+972-58-7002004",
+        "message_body": (
+            "היי, ראיתי סטורי על ייעוץ תזונה. יש דיאטנית במרפאת שקד? מחיר מפגש ראשון?"
+        ),
+        "score": 62,
+        "summary": "שאלה על ייעוץ תזונה ומחיר מפגש ראשון בעקבות אינסטגרם.",
+        "urgency": "Low",
+        "detected_intent": "תמחור ייעוץ",
+    },
+    {
+        "source": "whatsapp",
+        "channel": "chat",
+        "contact_name": "Sara Quinn",
+        "contact_email": "sara.quinn.demo@example.com",
+        "contact_phone": "+972-54-7003003",
+        "message_body": (
+            "Need a same-week dermatology consult for a rash on my arm. "
+            "Can you send available slots?"
+        ),
+        "score": 90,
+        "summary": "Same-week dermatology request for arm rash; wants available slots.",
+        "urgency": "High",
+        "detected_intent": "Dermatology booking",
+    },
+    {
+        "source": "email",
+        "channel": "inbound",
+        "contact_name": "Jordan Pike",
+        "contact_email": "jordan.pike.demo@example.com",
+        "contact_phone": None,
+        "message_body": (
+            "We need a quote for annual employee checkups for a small company of 15 people. "
+            "Are bulk packages available?"
+        ),
+        "score": 70,
+        "summary": "Corporate quote request for 15 annual employee checkups.",
+        "urgency": "Med",
+        "detected_intent": "Corporate package",
+    },
+    {
+        "source": "webform",
+        "channel": "contact",
+        "contact_name": "יעל שרון",
+        "contact_email": "yael.sharon.demo@example.co.il",
+        "contact_phone": "+972-54-7002002",
+        "message_body": (
+            "ראיתי באתר שאתם עושים בדיקות דם בבוקר. כמה זה עולה בלי הפניה ומתי יש תורים?"
+        ),
+        "score": 58,
+        "summary": "בירור מחיר וזמינות לבדיקות דם ללא הפניה.",
+        "urgency": "Low",
+        "detected_intent": "תמחור בדיקות",
+    },
+]
+
+
+def _lead_from_seed(item: Dict[str, Any], *, live: bool = False) -> Lead:
     hours_ago = int(item.get("hours_ago", 0))
     created = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
     payload = {
@@ -190,7 +314,8 @@ def _lead_from_seed(item: Dict[str, Any]) -> Lead:
         "email": item.get("contact_email"),
         "phone": item.get("contact_phone"),
         "message": item["message_body"],
-        "seed": True,
+        "seed": not live,
+        "live_demo": live,
     }
     return Lead(
         created_at=created,
@@ -207,6 +332,23 @@ def _lead_from_seed(item: Dict[str, Any]) -> Lead:
         detected_intent=item["detected_intent"],
         stage=item.get("stage", "New"),
     )
+
+
+async def insert_live_incoming(session: AsyncSession) -> Lead:
+    """Insert one randomized inbound demo lead (immediate New). No AI required."""
+    base = dict(random.choice(INBOUND_DEMO_LEADS))
+    base["stage"] = "New"
+    base["hours_ago"] = 0
+    # Light uniqueness so repeat arrivals feel fresh on camera.
+    suffix = random.randint(10, 99)
+    phone = base.get("contact_phone")
+    if phone and phone[-2:].isdigit():
+        base["contact_phone"] = phone[:-2] + f"{suffix:02d}"
+    row = _lead_from_seed(base, live=True)
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+    return row
 
 
 async def ensure_seeded(session: AsyncSession) -> int:

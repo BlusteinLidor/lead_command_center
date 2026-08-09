@@ -55,6 +55,13 @@ export async function resetDemo(): Promise<{ ok: boolean; seeded: number }> {
   return res.json() as Promise<{ ok: boolean; seeded: number }>;
 }
 
+/** Pre-scored fictional inbound lead (no OpenAI) for live demo recording. */
+export async function pushIncomingLead(): Promise<Lead> {
+  const res = await fetch(`${API_BASE}/demo/incoming`, { method: "POST" });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<Lead>;
+}
+
 export async function checkHealth(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE}/health`);

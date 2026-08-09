@@ -1,13 +1,24 @@
 import { FlaskConical } from "lucide-react";
 import { LanguageToggle } from "./LanguageToggle";
+import {
+  IncomingSettings,
+  type IncomingIntervalSec,
+} from "./IncomingSettings";
 import { useI18n } from "../i18n/I18nProvider";
 
 interface TopBarProps {
   demoOpen: boolean;
   onToggleDemo: () => void;
+  incomingIntervalSec: IncomingIntervalSec;
+  onIncomingIntervalChange: (value: IncomingIntervalSec) => void;
 }
 
-export function TopBar({ demoOpen, onToggleDemo }: TopBarProps) {
+export function TopBar({
+  demoOpen,
+  onToggleDemo,
+  incomingIntervalSec,
+  onIncomingIntervalChange,
+}: TopBarProps) {
   const { t } = useI18n();
 
   return (
@@ -61,6 +72,10 @@ export function TopBar({ demoOpen, onToggleDemo }: TopBarProps) {
           {t("demoChip")}
         </span>
         <LanguageToggle />
+        <IncomingSettings
+          intervalSec={incomingIntervalSec}
+          onIntervalChange={onIncomingIntervalChange}
+        />
         <button
           type="button"
           onClick={onToggleDemo}

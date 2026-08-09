@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { Lead, LeadStage, UrgencyFilter } from "./types/lead";
-import { useLeads } from "./hooks/useLeads";
+import { useIncomingTicker, useLeads } from "./hooks/useLeads";
 import { useI18n } from "./i18n/I18nProvider";
 import { TopBar } from "./components/TopBar";
+import type { IncomingIntervalSec } from "./components/IncomingSettings";
 import { KpiStrip } from "./components/KpiStrip";
 import { PipelineBoard } from "./components/PipelineBoard";
 import { LeadDrawer } from "./components/LeadDrawer";
@@ -26,12 +27,17 @@ export default function App() {
     changeStage,
     runReset,
     runSimulate,
+    runIncoming,
   } = useLeads();
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>("all");
   const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [incomingIntervalSec, setIncomingIntervalSec] =
+    useState<IncomingIntervalSec>(0);
+
+  useIncomingTicker(incomingIntervalSec, runIncoming);
 
   const channels = useMemo(() => {
     const set = new Set<string>();
@@ -86,6 +92,8 @@ export default function App() {
         <TopBar
           demoOpen={demoOpen}
           onToggleDemo={() => setDemoOpen((v) => !v)}
+          incomingIntervalSec={incomingIntervalSec}
+          onIncomingIntervalChange={setIncomingIntervalSec}
         />
 
         <DemoConsole

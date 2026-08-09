@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ai_processor import analyze_lead
 from database import AsyncSessionLocal, get_db, init_db
 from models import Lead, LeadAnalysis, LeadOut, LeadStageUpdate, LeadWebhookPayload
-from seed_data import ensure_seeded, reset_and_seed
+from seed_data import ensure_seeded, insert_live_incoming, reset_and_seed
 
 load_dotenv()
 
@@ -139,6 +139,12 @@ async def demo_reset(db: DbSession) -> dict:
     """Wipe leads and restore fictional portfolio seed data."""
     count = await reset_and_seed(db)
     return {"ok": True, "seeded": count}
+
+
+@app.post("/demo/incoming", response_model=LeadOut, status_code=status.HTTP_201_CREATED)
+async def demo_incoming(db: DbSession) -> Lead:
+    """Push one fictional live inbound lead (no OpenAI) for portfolio recording."""
+    return await insert_live_incoming(db)
 
 
 def _mount_spa() -> None:

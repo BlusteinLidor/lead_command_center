@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchLeads,
+  pushIncomingLead,
   resetDemo,
   simulateLead,
   updateLeadStage,
@@ -61,19 +62,38 @@ export function useLeads() {
     }
   }, [load]);
 
-  const runSimulate = useCallback(async (payload: LeadWebhookPayload) => {
+  const prependLead = useCallback((created: Lead) => {
+    setLeads((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
+    setHighlightId(created.id);
+    window.setTimeout(() => setHighlightId(null), 2200);
+  }, []);
+
+  const runSimulate = useCallback(
+    async (payload: LeadWebhookPayload) => {
+      setError(null);
+      try {
+        const created = await simulateLead(payload);
+        prependLead(created);
+        return created;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        throw e;
+      }
+    },
+    [prependLead],
+  );
+
+  const runIncoming = useCallback(async () => {
     setError(null);
     try {
-      const created = await simulateLead(payload);
-      setLeads((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
-      setHighlightId(created.id);
-      window.setTimeout(() => setHighlightId(null), 2200);
+      const created = await pushIncomingLead();
+      prependLead(created);
       return created;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       throw e;
     }
-  }, []);
+  }, [prependLead]);
 
   return {
     leads,
@@ -86,5 +106,47 @@ export function useLeads() {
     changeStage,
     runReset,
     runSimulate,
+    runIncoming,
   };
+}
+
+/** Fire `onTick` on an interval; `0` disables. First tick soon after enable, then every N s. */
+export function useIncomingTicker(
+  intervalSec: number,
+  onTick: () => Promise<unknown>,
+) {
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
+  const busyRef = useRef(false);
+
+  useEffect(() => {
+    if (!intervalSec || intervalSec <= 0) return;
+    const ms = intervalSec * 1000;
+    // First lead arrives soon so recording does not wait a full period.
+    const firstMs = Math.min(2500, ms);
+
+    const run = () => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      void onTickRef
+        .current()
+        .catch(() => {
+          /* error surfaced by useLeads */
+        })
+        .finally(() => {
+          busyRef.current = false;
+        });
+    };
+
+    let intervalId: number | undefined;
+    const firstId = window.setTimeout(() => {
+      run();
+      intervalId = window.setInterval(run, ms);
+    }, firstMs);
+
+    return () => {
+      window.clearTimeout(firstId);
+      if (intervalId !== undefined) window.clearInterval(intervalId);
+    };
+  }, [intervalSec]);
 }
