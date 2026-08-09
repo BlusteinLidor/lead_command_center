@@ -23,6 +23,7 @@ export function LeadCard({
   const isHigh = lead.urgency === "High";
   const ago = relativeTime(lead.created_at, locale, {
     justNow: t("justNow"),
+    minutesAgo: (n) => t("minutesAgo", { n }),
     hoursAgo: (n) => t("hoursAgo", { n }),
     daysAgo: (n) => t("daysAgo", { n }),
   });

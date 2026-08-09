@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional, Tuple
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -91,3 +91,12 @@ class LeadOut(BaseModel):
     urgency: str
     detected_intent: str
     stage: str
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        """SQLite often strips tzinfo; treat naive values as UTC and emit `Z`."""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        else:
+            value = value.astimezone(timezone.utc)
+        return value.isoformat().replace("+00:00", "Z")

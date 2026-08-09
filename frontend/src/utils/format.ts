@@ -5,19 +5,42 @@ export function initials(name: string | null | undefined): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/**
+ * Parse API timestamps. SQLite-backed values may omit timezone; those are UTC.
+ * Without this, browsers treat naive ISO as local and skew by the local offset
+ * (e.g. Israel UTC+3 → looks ~3 hours old right after create).
+ */
+export function parseApiDate(iso: string): number {
+  const raw = (iso || "").trim();
+  if (!raw) return NaN;
+  const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw);
+  const normalized = hasZone
+    ? raw
+    : raw.includes("T")
+      ? `${raw}Z`
+      : `${raw.replace(" ", "T")}Z`;
+  return new Date(normalized).getTime();
+}
+
 export function relativeTime(
   iso: string,
   _locale: "en" | "he",
   labels: {
     justNow: string;
+    minutesAgo: (n: number) => string;
     hoursAgo: (n: number) => string;
     daysAgo: (n: number) => string;
   },
 ): string {
-  const then = new Date(iso).getTime();
+  const then = parseApiDate(iso);
   if (Number.isNaN(then)) return "";
-  const hours = Math.max(0, Math.floor((Date.now() - then) / 3_600_000));
-  if (hours < 1) return labels.justNow;
+  // Clamp future skew (clock drift) to "just now"
+  const diffMs = Math.max(0, Date.now() - then);
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 45) return labels.justNow;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return labels.minutesAgo(minutes);
+  const hours = Math.floor(minutes / 60);
   if (hours < 48) return labels.hoursAgo(hours);
   const days = Math.floor(hours / 24);
   return labels.daysAgo(days);
