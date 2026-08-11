@@ -1,23 +1,23 @@
-import { FlaskConical } from "lucide-react";
 import { LanguageToggle } from "./LanguageToggle";
 import {
   IncomingSettings,
   type IncomingIntervalSec,
 } from "./IncomingSettings";
 import { useI18n } from "../i18n/I18nProvider";
+import type { LeadWebhookPayload } from "../types/lead";
 
 interface TopBarProps {
-  demoOpen: boolean;
-  onToggleDemo: () => void;
   incomingIntervalSec: IncomingIntervalSec;
   onIncomingIntervalChange: (value: IncomingIntervalSec) => void;
+  onReset: () => Promise<void>;
+  onSimulate: (payload: LeadWebhookPayload) => Promise<unknown>;
 }
 
 export function TopBar({
-  demoOpen,
-  onToggleDemo,
   incomingIntervalSec,
   onIncomingIntervalChange,
+  onReset,
+  onSimulate,
 }: TopBarProps) {
   const { t } = useI18n();
 
@@ -61,37 +61,13 @@ export function TopBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-          style={{
-            background: "var(--color-primary-soft)",
-            color: "var(--color-primary)",
-            border: "1px solid var(--color-primary-mid)",
-          }}
-        >
-          {t("demoChip")}
-        </span>
         <LanguageToggle />
         <IncomingSettings
           intervalSec={incomingIntervalSec}
           onIntervalChange={onIncomingIntervalChange}
+          onReset={onReset}
+          onSimulate={onSimulate}
         />
-        <button
-          type="button"
-          onClick={onToggleDemo}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-          style={{
-            background: demoOpen
-              ? "var(--color-primary)"
-              : "var(--color-surface-solid)",
-            color: demoOpen ? "#fff" : "var(--color-ink)",
-            border: "1px solid var(--color-border-strong)",
-            cursor: "pointer",
-          }}
-        >
-          <FlaskConical size={14} strokeWidth={2.25} />
-          {demoOpen ? t("demoClose") : t("demoOpen")}
-        </button>
       </div>
     </header>
   );

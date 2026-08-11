@@ -34,6 +34,15 @@ class Lead(Base):
     urgency: Mapped[str] = mapped_column(String(16), nullable=False)
     detected_intent: Mapped[str] = mapped_column(String(512), nullable=False)
     stage: Mapped[str] = mapped_column(String(32), nullable=False, default="New")
+    # Bilingual display fields (locale switch picks EN or HE on the client).
+    contact_name_en: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    contact_name_he: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    message_body_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    message_body_he: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    summary_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    summary_he: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    detected_intent_en: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    detected_intent_he: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
 
 class LeadWebhookPayload(BaseModel):
@@ -65,10 +74,18 @@ class LeadWebhookPayload(BaseModel):
 
 
 class LeadAnalysis(BaseModel):
+    """Bilingual AI assessment so the UI can show EN or HE without re-running analysis."""
+
     score: int = Field(ge=1, le=100)
-    summary: str = Field(max_length=500)
     urgency: Literal["Low", "Med", "High"]
-    detected_intent: str = Field(max_length=256)
+    summary_en: str = Field(max_length=500)
+    summary_he: str = Field(max_length=500)
+    detected_intent_en: str = Field(max_length=256)
+    detected_intent_he: str = Field(max_length=256)
+    message_en: str = Field(max_length=4000)
+    message_he: str = Field(max_length=4000)
+    contact_name_en: Optional[str] = Field(default=None, max_length=256)
+    contact_name_he: Optional[str] = Field(default=None, max_length=256)
 
 
 class LeadStageUpdate(BaseModel):
@@ -91,6 +108,14 @@ class LeadOut(BaseModel):
     urgency: str
     detected_intent: str
     stage: str
+    contact_name_en: Optional[str] = None
+    contact_name_he: Optional[str] = None
+    message_body_en: Optional[str] = None
+    message_body_he: Optional[str] = None
+    summary_en: Optional[str] = None
+    summary_he: Optional[str] = None
+    detected_intent_en: Optional[str] = None
+    detected_intent_he: Optional[str] = None
 
     @field_serializer("created_at")
     def serialize_created_at(self, value: datetime) -> str:

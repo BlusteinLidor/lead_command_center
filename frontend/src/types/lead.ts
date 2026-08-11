@@ -22,6 +22,15 @@ export interface Lead {
   urgency: Urgency | string;
   detected_intent: string;
   stage: LeadStage | string;
+  /** Bilingual fields — UI locale selects EN or HE for display. */
+  contact_name_en?: string | null;
+  contact_name_he?: string | null;
+  message_body_en?: string | null;
+  message_body_he?: string | null;
+  summary_en?: string | null;
+  summary_he?: string | null;
+  detected_intent_en?: string | null;
+  detected_intent_he?: string | null;
 }
 
 export interface LeadWebhookPayload {
@@ -36,3 +45,70 @@ export interface LeadWebhookPayload {
 
 export type UrgencyFilter = "all" | "High";
 export type ChannelFilter = "all" | string;
+
+/** Text fields that switch with EN/HE UI locale. */
+export interface LocalizedLeadText {
+  contact_name: string | null;
+  message_body: string;
+  summary: string;
+  detected_intent: string;
+}
+
+function firstNonEmpty(
+  ...values: Array<string | null | undefined>
+): string | null {
+  for (const v of values) {
+    if (v != null && String(v).trim() !== "") return v;
+  }
+  return null;
+}
+
+export function localizeLeadText(
+  lead: Lead,
+  locale: "en" | "he",
+): LocalizedLeadText {
+  if (locale === "he") {
+    return {
+      contact_name: firstNonEmpty(
+        lead.contact_name_he,
+        lead.contact_name_en,
+        lead.contact_name,
+      ),
+      message_body:
+        firstNonEmpty(
+          lead.message_body_he,
+          lead.message_body_en,
+          lead.message_body,
+        ) ?? "",
+      summary:
+        firstNonEmpty(lead.summary_he, lead.summary_en, lead.summary) ?? "",
+      detected_intent:
+        firstNonEmpty(
+          lead.detected_intent_he,
+          lead.detected_intent_en,
+          lead.detected_intent,
+        ) ?? "",
+    };
+  }
+  return {
+    contact_name: firstNonEmpty(
+      lead.contact_name_en,
+      lead.contact_name_he,
+      lead.contact_name,
+    ),
+    message_body:
+      firstNonEmpty(
+        lead.message_body_en,
+        lead.message_body_he,
+        lead.message_body,
+      ) ?? "",
+    summary:
+      firstNonEmpty(lead.summary_en, lead.summary_he, lead.summary) ?? "",
+    detected_intent:
+      firstNonEmpty(
+        lead.detected_intent_en,
+        lead.detected_intent_he,
+        lead.detected_intent,
+      ) ?? "",
+  };
+}

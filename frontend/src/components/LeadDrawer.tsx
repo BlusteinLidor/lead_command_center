@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Mail, Phone } from "lucide-react";
 import type { Lead, LeadStage } from "../types/lead";
-import { LEAD_STAGES } from "../types/lead";
+import { LEAD_STAGES, localizeLeadText } from "../types/lead";
 import { useI18n } from "../i18n/I18nProvider";
 import { stageLabel } from "../i18n";
 import { formatChannel } from "../utils/format";
@@ -25,10 +25,11 @@ export function LeadDrawer({
   onStageChange,
 }: LeadDrawerProps) {
   const { t, locale, dir } = useI18n();
+  const text = lead ? localizeLeadText(lead, locale) : null;
 
   return (
     <AnimatePresence>
-      {open && lead && (
+      {open && lead && text && (
         <>
           <motion.div
             className="fixed inset-0 z-40"
@@ -66,7 +67,7 @@ export function LeadDrawer({
                     fontWeight: 600,
                   }}
                 >
-                  {lead.contact_name?.trim() || t("noName")}
+                  {text.contact_name?.trim() || t("noName")}
                 </h2>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <UrgencyBadge urgency={lead.urgency} />
@@ -74,7 +75,7 @@ export function LeadDrawer({
                     className="text-xs"
                     style={{ color: "var(--color-ink-faint)" }}
                   >
-                    {formatChannel(lead.source, lead.channel)}
+                    {formatChannel(lead.source, lead.channel, locale)}
                   </span>
                 </div>
               </div>
@@ -118,7 +119,7 @@ export function LeadDrawer({
                       className="bidi-auto"
                       style={{ color: "var(--color-ink)" }}
                     >
-                      {lead.detected_intent}
+                      {text.detected_intent}
                     </span>
                   </div>
                 </div>
@@ -135,8 +136,14 @@ export function LeadDrawer({
                   label={t("phone")}
                   value={lead.contact_phone || t("noPhone")}
                 />
-                <MetaRow label={t("source")} value={lead.source || "—"} />
-                <MetaRow label={t("channel")} value={lead.channel || "—"} />
+                <MetaRow
+                  label={t("source")}
+                  value={formatChannel(lead.source, null, locale)}
+                />
+                <MetaRow
+                  label={t("channel")}
+                  value={formatChannel(null, lead.channel, locale)}
+                />
               </Section>
 
               <Section title={t("aiSummary")}>
@@ -144,7 +151,7 @@ export function LeadDrawer({
                   className="bidi-auto m-0 text-sm leading-relaxed"
                   style={{ color: "var(--color-ink)" }}
                 >
-                  {lead.summary}
+                  {text.summary}
                 </p>
               </Section>
 
@@ -156,7 +163,7 @@ export function LeadDrawer({
                     whiteSpace: "pre-wrap",
                   }}
                 >
-                  {lead.message_body}
+                  {text.message_body}
                 </p>
               </Section>
 

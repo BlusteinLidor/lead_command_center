@@ -91,19 +91,36 @@ async def webhook_lead(payload: LeadWebhookPayload, db: DbSession) -> Lead:
             detail=f"AI processing failed: {e!s}",
         ) from e
 
+    name_en = (analysis.contact_name_en or payload.name or "").strip() or None
+    name_he = (analysis.contact_name_he or payload.name or "").strip() or None
+    msg_en = (analysis.message_en or message).strip()
+    msg_he = (analysis.message_he or message).strip()
+    sum_en = analysis.summary_en.strip()
+    sum_he = analysis.summary_he.strip()
+    intent_en = analysis.detected_intent_en.strip()
+    intent_he = analysis.detected_intent_he.strip()
+
     row = Lead(
         raw_payload=payload.to_stored_payload(),
         source=payload.source,
         channel=payload.channel,
-        contact_name=payload.name,
+        contact_name=name_en or name_he or payload.name,
         contact_email=payload.email,
         contact_phone=payload.phone,
-        message_body=message,
+        message_body=msg_en or msg_he or message,
         score=analysis.score,
-        summary=analysis.summary,
+        summary=sum_en or sum_he,
         urgency=analysis.urgency,
-        detected_intent=analysis.detected_intent,
+        detected_intent=intent_en or intent_he,
         stage="New",
+        contact_name_en=name_en,
+        contact_name_he=name_he,
+        message_body_en=msg_en or None,
+        message_body_he=msg_he or None,
+        summary_en=sum_en or None,
+        summary_he=sum_he or None,
+        detected_intent_en=intent_en or None,
+        detected_intent_he=intent_he or None,
     )
     db.add(row)
     await db.commit()

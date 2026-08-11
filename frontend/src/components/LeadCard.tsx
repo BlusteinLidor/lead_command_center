@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import type { Lead } from "../types/lead";
+import { localizeLeadText } from "../types/lead";
 import { useI18n } from "../i18n/I18nProvider";
 import { formatChannel, initials, relativeTime } from "../utils/format";
 import { ScoreRing } from "./ScoreRing";
@@ -19,7 +20,8 @@ export function LeadCard({
   onClick,
 }: LeadCardProps) {
   const { t, locale } = useI18n();
-  const name = lead.contact_name?.trim() || t("noName");
+  const text = localizeLeadText(lead, locale);
+  const name = text.contact_name?.trim() || t("noName");
   const isHigh = lead.urgency === "High";
   const ago = relativeTime(lead.created_at, locale, {
     justNow: t("justNow"),
@@ -64,7 +66,7 @@ export function LeadCard({
             color: "var(--color-primary)",
           }}
         >
-          {initials(lead.contact_name)}
+          {initials(text.contact_name)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -86,7 +88,7 @@ export function LeadCard({
                     color: "var(--color-ink-muted)",
                   }}
                 >
-                  {formatChannel(lead.source, lead.channel)}
+                  {formatChannel(lead.source, lead.channel, locale)}
                 </span>
                 <span>{ago}</span>
               </div>
@@ -100,7 +102,7 @@ export function LeadCard({
             className="bidi-auto mt-2 line-clamp-2 text-xs leading-relaxed"
             style={{ color: "var(--color-ink-muted)", margin: 0 }}
           >
-            {lead.summary}
+            {text.summary}
           </p>
         </div>
       </div>

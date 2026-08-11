@@ -7,7 +7,6 @@ import type { IncomingIntervalSec } from "./components/IncomingSettings";
 import { KpiStrip } from "./components/KpiStrip";
 import { PipelineBoard } from "./components/PipelineBoard";
 import { LeadDrawer } from "./components/LeadDrawer";
-import { DemoConsole } from "./components/DemoConsole";
 import {
   BoardSkeleton,
   EmptyState,
@@ -16,7 +15,7 @@ import {
 import { formatChannel } from "./utils/format";
 
 export default function App() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const {
     leads,
     loading,
@@ -31,7 +30,6 @@ export default function App() {
   } = useLeads();
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>("all");
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [incomingIntervalSec, setIncomingIntervalSec] =
@@ -90,14 +88,8 @@ export default function App() {
         style={{ padding: "var(--space-page)" }}
       >
         <TopBar
-          demoOpen={demoOpen}
-          onToggleDemo={() => setDemoOpen((v) => !v)}
           incomingIntervalSec={incomingIntervalSec}
           onIncomingIntervalChange={setIncomingIntervalSec}
-        />
-
-        <DemoConsole
-          open={demoOpen}
           onReset={runReset}
           onSimulate={runSimulate}
         />
@@ -133,7 +125,7 @@ export default function App() {
                   onClick={() =>
                     setChannelFilter((prev) => (prev === ch ? "all" : ch))
                   }
-                  label={formatChannel(ch, null)}
+                  label={formatChannel(ch, null, locale)}
                 />
               ))}
             </div>

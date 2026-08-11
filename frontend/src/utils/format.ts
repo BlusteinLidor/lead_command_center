@@ -46,23 +46,46 @@ export function relativeTime(
   return labels.daysAgo(days);
 }
 
-export function formatChannel(source: string | null, channel: string | null): string {
+const CHANNEL_EN: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  webform: "Web",
+  facebook: "Facebook",
+  phone: "Phone",
+  email: "Email",
+  instagram: "Instagram",
+  chat: "Chat",
+  contact: "Form",
+  lead_ad: "Ad",
+  callback_request: "Callback",
+  inbound: "Inbound",
+  reply: "Reply",
+  dm: "DM",
+  front_desk: "Desk",
+};
+
+const CHANNEL_HE: Record<string, string> = {
+  whatsapp: "וואטסאפ",
+  webform: "אתר",
+  facebook: "פייסבוק",
+  phone: "טלפון",
+  email: "אימייל",
+  instagram: "אינסטגרם",
+  chat: "צ'אט",
+  contact: "טופס",
+  lead_ad: "מודעה",
+  callback_request: "חזרה",
+  inbound: "נכנס",
+  reply: "תשובה",
+  dm: "הודעה",
+  front_desk: "קבלה",
+};
+
+export function formatChannel(
+  source: string | null,
+  channel: string | null,
+  locale: "en" | "he" = "en",
+): string {
   const s = (source || channel || "inbound").toLowerCase();
-  const map: Record<string, string> = {
-    whatsapp: "WhatsApp",
-    webform: "Web",
-    facebook: "Facebook",
-    phone: "Phone",
-    email: "Email",
-    instagram: "Instagram",
-    chat: "Chat",
-    contact: "Form",
-    lead_ad: "Ad",
-    callback_request: "Callback",
-    inbound: "Inbound",
-    reply: "Reply",
-    dm: "DM",
-    front_desk: "Desk",
-  };
+  const map = locale === "he" ? CHANNEL_HE : CHANNEL_EN;
   return map[s] ?? (source || channel || "—");
 }

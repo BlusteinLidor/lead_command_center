@@ -24,23 +24,35 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
 )
 
+# Columns added after the original schema; SQLite needs ALTER for existing DBs.
+_OPTIONAL_LEAD_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("stage", "VARCHAR(32) DEFAULT 'New'"),
+    ("contact_name_en", "VARCHAR(256)"),
+    ("contact_name_he", "VARCHAR(256)"),
+    ("message_body_en", "TEXT"),
+    ("message_body_he", "TEXT"),
+    ("summary_en", "TEXT"),
+    ("summary_he", "TEXT"),
+    ("detected_intent_en", "VARCHAR(512)"),
+    ("detected_intent_he", "VARCHAR(512)"),
+)
 
-def _ensure_stage_column(sync_conn) -> None:
-    """Add stage column to existing SQLite DBs created before the field existed."""
+
+def _ensure_lead_columns(sync_conn) -> None:
+    """Add newer lead columns to existing SQLite DBs created before those fields existed."""
     inspector = inspect(sync_conn)
     if "leads" not in inspector.get_table_names():
         return
     cols = {c["name"] for c in inspector.get_columns("leads")}
-    if "stage" not in cols:
-        sync_conn.execute(
-            text("ALTER TABLE leads ADD COLUMN stage VARCHAR(32) DEFAULT 'New'")
-        )
+    for name, col_type in _OPTIONAL_LEAD_COLUMNS:
+        if name not in cols:
+            sync_conn.execute(text(f"ALTER TABLE leads ADD COLUMN {name} {col_type}"))
 
 
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.run_sync(_ensure_stage_column)
+        await conn.run_sync(_ensure_lead_columns)
 
 
 async def get_db():
