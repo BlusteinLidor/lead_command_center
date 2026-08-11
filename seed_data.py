@@ -18,7 +18,7 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "whatsapp",
         "channel": "chat",
-        "contact_name_en": "Noa Cohen",
+        "contact_name_en": "Rachel Miller",
         "contact_name_he": "נועה כהן",
         "contact_email": None,
         "contact_phone": "+972-50-7001001",
@@ -42,9 +42,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "webform",
         "channel": "contact",
-        "contact_name_en": "Daniel Berger",
+        "contact_name_en": "Daniel Brooks",
         "contact_name_he": "דניאל ברגר",
-        "contact_email": "daniel.berger.demo@example.com",
+        "contact_email": "daniel.brooks.demo@example.com",
         "contact_phone": "+972-52-7001002",
         "message_body_en": (
             "Looking for a pediatric checkup for my 4-year-old next week. "
@@ -66,9 +66,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "facebook",
         "channel": "lead_ad",
-        "contact_name_en": "Michal Levi",
+        "contact_name_en": "Michelle Lewis",
         "contact_name_he": "מיכל לוי",
-        "contact_email": "michal.levi.demo@example.co.il",
+        "contact_email": "michelle.lewis.demo@example.com",
         "contact_phone": "+972-54-7001003",
         "message_body_en": (
             "I saw an ad about fast blood tests. How much does it cost and when are appointments available?"
@@ -88,7 +88,7 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "phone",
         "channel": "callback_request",
-        "contact_name_en": "Yossi Avraham",
+        "contact_name_en": "Joseph Carter",
         "contact_name_he": "יוסי אברהם",
         "contact_email": None,
         "contact_phone": "+972-50-7001004",
@@ -112,9 +112,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "email",
         "channel": "inbound",
-        "contact_name_en": "Shira Ben-David",
+        "contact_name_en": "Sarah Bennett",
         "contact_name_he": "שירה בן-דוד",
-        "contact_email": "shira.bendavid.demo@example.org",
+        "contact_email": "sarah.bennett.demo@example.com",
         "contact_phone": None,
         "message_body_en": (
             "We're a new family in the neighborhood looking for a regular pediatrician. "
@@ -136,9 +136,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "whatsapp",
         "channel": "chat",
-        "contact_name_en": "Omar Hadad",
+        "contact_name_en": "Omar Hayes",
         "contact_name_he": "עומר חדד",
-        "contact_email": "omar.hadad.demo@example.com",
+        "contact_email": "omar.hayes.demo@example.com",
         "contact_phone": "+972-58-7001005",
         "message_body_en": (
             "Need a same-week dermatology consult for a rash. "
@@ -160,9 +160,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "webform",
         "channel": "contact",
-        "contact_name_en": "Ronit Peled",
+        "contact_name_en": "Renee Parker",
         "contact_name_he": "רונית פלד",
-        "contact_email": "ronit.peled.demo@example.co.il",
+        "contact_email": "renee.parker.demo@example.com",
         "contact_phone": "+972-52-7001006",
         "message_body_en": (
             "I'd like a quote for periodic employee checkups for a small company (12 people)."
@@ -182,9 +182,9 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "email",
         "channel": "reply",
-        "contact_name_en": "Tal Oran",
+        "contact_name_en": "Taylor Morgan",
         "contact_name_he": "טל אורן",
-        "contact_email": "tal.oran.demo@example.co.il",
+        "contact_email": "taylor.morgan.demo@example.com",
         "contact_phone": None,
         "message_body_en": (
             "Thanks for the vaccination reminder email. "
@@ -206,7 +206,7 @@ SEED_LEADS: List[Dict[str, Any]] = [
     {
         "source": "instagram",
         "channel": "dm",
-        "contact_name_en": "Lihi Barak",
+        "contact_name_en": "Leah Brooks",
         "contact_name_he": "ליהי ברק",
         "contact_email": None,
         "contact_phone": "+972-54-7001007",
@@ -257,7 +257,7 @@ INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
     {
         "source": "whatsapp",
         "channel": "chat",
-        "contact_name_en": "Adi Mizrahi",
+        "contact_name_en": "Adam Morris",
         "contact_name_he": "עדי מזרחי",
         "contact_email": None,
         "contact_phone": "+972-50-7002001",
@@ -301,7 +301,7 @@ INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
     {
         "source": "facebook",
         "channel": "lead_ad",
-        "contact_name_en": "Uri and Noa",
+        "contact_name_en": "Eric and Nora",
         "contact_name_he": "אורי ונועה",
         "contact_email": None,
         "contact_phone": "+972-52-7002003",
@@ -323,7 +323,7 @@ INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
     {
         "source": "phone",
         "channel": "callback_request",
-        "contact_name_en": "Mark Ezra",
+        "contact_name_en": "Mark Evans",
         "contact_name_he": "מארק עזרא",
         "contact_email": None,
         "contact_phone": "+972-52-7003002",
@@ -345,7 +345,7 @@ INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
     {
         "source": "instagram",
         "channel": "dm",
-        "contact_name_en": "Noa Alon",
+        "contact_name_en": "Nora Allen",
         "contact_name_he": "נועה אלון",
         "contact_email": None,
         "contact_phone": "+972-58-7002004",
@@ -409,9 +409,9 @@ INBOUND_DEMO_LEADS: List[Dict[str, Any]] = [
     {
         "source": "webform",
         "channel": "contact",
-        "contact_name_en": "Yael Sharon",
+        "contact_name_en": "Julie Simmons",
         "contact_name_he": "יעל שרון",
-        "contact_email": "yael.sharon.demo@example.co.il",
+        "contact_email": "julie.simmons.demo@example.com",
         "contact_phone": "+972-54-7002002",
         "message_body_en": (
             "I saw on the website that you do morning blood tests. "
@@ -523,6 +523,17 @@ async def ensure_seeded(session: AsyncSession) -> int:
         await session.execute(select(Lead).order_by(Lead.id.asc()).limit(1))
     ).scalar_one_or_none()
     if sample is not None and not sample.summary_en and not sample.summary_he:
+        return await reset_and_seed(session)
+
+    # Refresh seed catalog when EN names (or other fixed fields) change.
+    expected_en = SEED_LEADS[0].get("contact_name_en")
+    if (
+        sample is not None
+        and expected_en
+        and getattr(sample, "contact_name_en", None) != expected_en
+        and isinstance(sample.raw_payload, dict)
+        and sample.raw_payload.get("seed")
+    ):
         return await reset_and_seed(session)
     return 0
 
