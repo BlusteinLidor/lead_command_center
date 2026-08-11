@@ -14,6 +14,28 @@ export function useLeads() {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [highlightId, setHighlightId] = useState<number | null>(null);
+  const [toastLead, setToastLead] = useState<Lead | null>(null);
+  const highlightTimerRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const flashHighlight = useCallback((id: number, ms = 2200) => {
+    if (highlightTimerRef.current != null) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    setHighlightId(id);
+    highlightTimerRef.current = window.setTimeout(() => {
+      setHighlightId((cur) => (cur === id ? null : cur));
+      highlightTimerRef.current = null;
+    }, ms);
+  }, []);
+
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current != null) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToastLead(null);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,8 +62,7 @@ export function useLeads() {
       setLeads((prev) =>
         prev.map((l) => (l.id === id ? updated : l)),
       );
-      setHighlightId(id);
-      window.setTimeout(() => setHighlightId(null), 1800);
+      flashHighlight(id, 1800);
       return updated;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -49,10 +70,11 @@ export function useLeads() {
     } finally {
       setUpdatingId(null);
     }
-  }, []);
+  }, [flashHighlight]);
 
   const runReset = useCallback(async () => {
     setError(null);
+    dismissToast();
     try {
       await resetDemo();
       await load();
@@ -60,13 +82,24 @@ export function useLeads() {
       setError(e instanceof Error ? e.message : String(e));
       throw e;
     }
-  }, [load]);
+  }, [load, dismissToast]);
 
-  const prependLead = useCallback((created: Lead) => {
-    setLeads((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
-    setHighlightId(created.id);
-    window.setTimeout(() => setHighlightId(null), 2200);
-  }, []);
+  const prependLead = useCallback(
+    (created: Lead) => {
+      setLeads((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
+      flashHighlight(created.id, 2200);
+      setToastLead(created);
+      if (toastTimerRef.current != null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+      // Long enough to catch on video; short enough not to clutter the board.
+      toastTimerRef.current = window.setTimeout(() => {
+        setToastLead((cur) => (cur?.id === created.id ? null : cur));
+        toastTimerRef.current = null;
+      }, 5600);
+    },
+    [flashHighlight],
+  );
 
   const runSimulate = useCallback(
     async (payload: LeadWebhookPayload) => {
@@ -102,6 +135,9 @@ export function useLeads() {
     setError,
     updatingId,
     highlightId,
+    toastLead,
+    flashHighlight,
+    dismissToast,
     load,
     changeStage,
     runReset,

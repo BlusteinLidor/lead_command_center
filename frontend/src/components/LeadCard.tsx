@@ -33,13 +33,14 @@ export function LeadCard({
   return (
     <motion.button
       type="button"
+      id={`lead-${lead.id}`}
       layout
       layoutId={`lead-card-${lead.id}`}
       initial={highlight ? { opacity: 0, y: -12, scale: 0.96 } : false}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 420, damping: 32 }}
       onClick={onClick}
-      className="w-full cursor-pointer rounded-[var(--radius-md)] p-3 text-start transition-shadow"
+      className="w-full cursor-pointer scroll-mt-4 rounded-[var(--radius-md)] p-3 text-start transition-shadow"
       style={{
         background: selected
           ? "var(--color-primary-soft)"

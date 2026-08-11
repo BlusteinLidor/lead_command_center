@@ -66,6 +66,9 @@ const en = {
   phone: "Phone",
   noEmail: "—",
   noPhone: "—",
+  toastNewLead: "New lead",
+  toastView: "View",
+  toastNewLeadAria: "New lead: {name}. Click to scroll to card.",
 } as const;
 
 const he: Record<TranslationKey, string> = {
@@ -132,6 +135,9 @@ const he: Record<TranslationKey, string> = {
   phone: "טלפון",
   noEmail: "—",
   noPhone: "—",
+  toastNewLead: "ליד חדש",
+  toastView: "הצג",
+  toastNewLeadAria: "ליד חדש: {name}. לחץ כדי לגלול לכרטיס.",
 };
 
 export const translations = { en, he } as const;

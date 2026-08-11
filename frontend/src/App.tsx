@@ -7,6 +7,7 @@ import type { IncomingIntervalSec } from "./components/IncomingSettings";
 import { KpiStrip } from "./components/KpiStrip";
 import { PipelineBoard } from "./components/PipelineBoard";
 import { LeadDrawer } from "./components/LeadDrawer";
+import { NewLeadToast } from "./components/NewLeadToast";
 import {
   BoardSkeleton,
   EmptyState,
@@ -22,6 +23,9 @@ export default function App() {
     error,
     updatingId,
     highlightId,
+    toastLead,
+    flashHighlight,
+    dismissToast,
     load,
     changeStage,
     runReset,
@@ -69,6 +73,24 @@ export default function App() {
     } catch {
       /* error surfaced via useLeads */
     }
+  };
+
+  const handleToastOpen = (lead: Lead) => {
+    // Ensure the card is visible even if filters would hide it.
+    setUrgencyFilter("all");
+    setChannelFilter("all");
+    dismissToast();
+    flashHighlight(lead.id, 2800);
+    // Wait a frame so filter updates can remount the card before scrolling.
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById(`lead-${lead.id}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "nearest",
+        });
+      }, 50);
+    });
   };
 
   return (
@@ -153,6 +175,12 @@ export default function App() {
           onStageChange={(stage) => void handleStageChange(stage)}
         />
       </div>
+
+      <NewLeadToast
+        lead={toastLead}
+        onDismiss={dismissToast}
+        onOpen={handleToastOpen}
+      />
     </div>
   );
 }
