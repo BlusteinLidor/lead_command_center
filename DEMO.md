@@ -106,18 +106,4 @@ Legacy Streamlit UI still exists as `dashboard.py` for reference; the product su
 
 ## Portfolio handoff
 
-```text
-id: lead-command-center
-demoUrl: PENDING — deploy on Render via render.yaml (see Deploy above). Service name: lead-command-center
-title_en: Lead Command Center
-title_he: מרכז פיקוד לידים
-problem_en: Leads arrive scattered across WhatsApp, forms, and email — follow-ups get missed in spreadsheets.
-problem_he: לידים מגיעים מפוזרים בוואטסאפ, טפסים ומייל — מעקב נופל בין גיליונות.
-solution_en: One ops board that ingests leads, scores and summarizes with AI, and lets you triage by stage.
-solution_he: לוח תפעול אחד שקולט לידים, מדרג ומסכם עם AI, ומאפשר לנהל שלב בצינור המכירות.
-result_en: Single source of truth — hot leads are visible immediately and staged in under a minute.
-result_he: מקור אמת אחד — לידים חמים נראים מיד ועוברים שלב בפחות מדקה.
-tech: FastAPI, React, TypeScript, Vite, Tailwind CSS, SQLite, OpenAI
-videoUrl:
-poster:
-```
+Give the main website [`HANDOFF.md`](HANDOFF.md). Paste `work.caseStudies` into `lib/i18n/en.ts` / `he.ts`. Restore the Render service before setting `href` live.
